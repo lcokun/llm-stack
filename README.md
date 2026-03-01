@@ -1,6 +1,6 @@
 # Local LLM Stack
 
-A self-hosted LLM stack running in Docker with GPU acceleration. Features an abliterated (uncensored) model, a vision model, and a transparent proxy that chains them together — send an image and get uncensored responses about it.
+A self-hosted LLM stack running in Docker with GPU acceleration. Features an abliterated (uncensored) model, a vision model, and a transparent proxy that chains them together.
 
 ## Architecture
 
@@ -13,9 +13,9 @@ oterm ──► Vision Bridge (:11435) ──► Ollama (:11434)
               └──────────────────────────┘
 ```
 
-- **Ollama** — model server with GPU passthrough (NVIDIA)
-- **Vision Bridge** — lightweight Python proxy (~130 lines) that detects images in chat, calls the vision model for a description, then injects it into the abliterated model's context
-- **oterm** — terminal UI client for chatting
+- **Ollama** - model server with GPU passthrough (NVIDIA)
+- **Vision Bridge** - lightweight Python proxy (~130 lines) that detects images in chat, calls the vision model for a description, then injects it into the abliterated model's context
+- **oterm** - terminal UI client for chatting
 
 ## Requirements
 
@@ -38,6 +38,8 @@ sudo usermod -aG docker $USER
 **Arch:**
 ```bash
 sudo pacman -S docker docker-compose
+# or: yay -S docker docker-compose
+# or: paru -S docker docker-compose
 sudo systemctl enable --now docker
 sudo usermod -aG docker $USER
 # Log out and back in for group change to take effect
@@ -60,6 +62,8 @@ sudo systemctl restart docker
 **Arch:**
 ```bash
 sudo pacman -S nvidia-container-toolkit
+# or: yay -S nvidia-container-toolkit
+# or: paru -S nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker
 ```
@@ -112,7 +116,31 @@ When you send a message **with an image**:
 3. Strips the image and prepends `[Image description: ...]` to your message
 4. Forwards the modified message to the abliterated model (`mannix/llama3.1-8b-abliterated`)
 
-The abliterated model never sees the image directly — it just gets a text description plus your question. This lets you use an uncensored model for reasoning while leveraging a vision model for image understanding.
+The abliterated model never sees the image directly. It just gets a text description plus your question, letting you use an uncensored model for reasoning while leveraging a vision model for image understanding.
+
+## Using Different Models
+
+You can swap in any Ollama-compatible models. Two places to change:
+
+**1. Pull your models:**
+```bash
+docker exec ollama ollama pull <your-chat-model>
+docker exec ollama ollama pull <your-vision-model>
+```
+
+**2. Update `docker-compose.yml` environment variables:**
+```yaml
+environment:
+  - CHAT_MODEL=<your-chat-model>
+  - VISION_MODEL=<your-vision-model>
+```
+
+Then restart the bridge:
+```bash
+docker compose up -d vision-bridge
+```
+
+Browse available models at [ollama.com/library](https://ollama.com/library).
 
 ## Models
 
