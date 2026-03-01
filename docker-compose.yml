@@ -1,0 +1,35 @@
+# docker-compose.yml
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  vision-bridge:
+    build: ./vision-bridge
+    container_name: vision-bridge
+    ports:
+      - "11435:11435"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - VISION_MODEL=llama3.2-vision:11b
+      - CHAT_MODEL=mannix/llama3.1-8b-abliterated
+      - BRIDGE_PORT=11435
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
