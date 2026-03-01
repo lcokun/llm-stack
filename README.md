@@ -1,4 +1,4 @@
-# Local LLM Stack
+# LLM Stack
 
 A self-hosted LLM stack running in Docker with GPU acceleration. Features an abliterated (uncensored) model, a vision model, and a transparent proxy that chains them together.
 
@@ -76,8 +76,8 @@ docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
 ### 3. Clone and start the stack
 
 ```bash
-git clone https://github.com/lcokun/local-llm.git
-cd local-llm
+git clone https://github.com/lcokun/llm-stack.git
+cd llm-stack
 docker compose up --build -d
 ```
 
