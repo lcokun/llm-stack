@@ -129,5 +129,5 @@ Browse available models at [ollama.com/library](https://ollama.com/library).
 - [x] Vision Bridge proxy
 - [x] SearXNG search integration
 - [x] Unified Docker Compose
-- [ ] Tailscale access
+- [x] Tailscale access
 - [ ] RAG pipeline
