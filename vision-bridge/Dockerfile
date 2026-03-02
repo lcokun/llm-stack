@@ -5,9 +5,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY bridge.py .
+COPY bridge.py ingest.py .
 
-ENV PYTHONBUFFERED=1
+ENV PYTHONUNBUFFERED=1
 
 EXPOSE 11435
 

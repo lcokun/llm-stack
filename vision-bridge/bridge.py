@@ -6,6 +6,8 @@ from urllib.parse import quote_plus
 
 from aiohttp import web, ClientSession
 
+from ingest import ingest_file, get_embedding, collection
+
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 VISION_MODEL = os.environ.get("VISION_MODEL", "llama3.2-vision:11b")
 CHAT_MODEL = os.environ.get("CHAT_MODEL", "mannix/llama3.1-8b-abliterated")
@@ -54,6 +56,56 @@ async def handle_chat(request: web.Request) -> web.StreamResponse:
     body = await request.json()
     messages = body.get("messages", [])
     last_user = find_last_user_message(messages)
+
+    if last_user and isinstance(last_user.get("content"), str) and last_user["content"].startswith("/ingest "):
+        # --- Ingest: parse file and store in ChromaDB ---
+        file_path = last_user["content"][len("/ingest "):].strip()
+        if not file_path.startswith("/"):
+            file_path = "/" + file_path
+        print(f"Ingest detected, processing: {file_path}")
+
+        try:
+            count = await ingest_file(file_path, OLLAMA_URL)
+            msg = f"Ingested {file_path} ({count} chunks stored in ChromaDB)."
+            print(msg)
+        except Exception as e:
+            msg = f"Ingest failed: {e}"
+            print(msg)
+
+        # Return a direct response instead of forwarding to chat model
+        response_body = json.dumps({
+            "model": CHAT_MODEL,
+            "message": {"role": "assistant", "content": msg},
+            "done": True,
+        })
+        return web.Response(
+            status=200,
+            body=response_body + "\n",
+            content_type="application/x-ndjson",
+        )
+
+    if last_user and isinstance(last_user.get("content"), str) and last_user["content"].startswith("/rag "):
+        # --- RAG: embed query, search ChromaDB, inject context ---
+        query = last_user["content"][len("/rag "):].strip()
+        print(f"RAG detected, searching ChromaDB for: {query}")
+
+        async with ClientSession() as session:
+            query_embedding = await get_embedding(session, query, OLLAMA_URL)
+
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=5,
+        )
+
+        docs = results["documents"][0]
+        if docs:
+            context = "\n\n---\n\n".join(docs)
+            last_user["content"] = (
+                f"[Relevant documents:\n{context}]\n\n{query}"
+            )
+            print(f"RAG: injected {len(docs)} chunks into context")
+        else:
+            print("RAG: no matching documents found")
 
     if last_user and isinstance(last_user.get("content"), str) and last_user["content"].startswith("/search "):
         # --- Search detected: query SearXNG ---

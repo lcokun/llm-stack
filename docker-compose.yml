@@ -31,16 +31,28 @@ services:
     container_name: vision-bridge
     ports:
       - "11435:11435"
+    volumes:
+      - /home/adminmel:/data:ro
     environment:
       - OLLAMA_URL=http://ollama:11434
       - VISION_MODEL=llama3.2-vision:11b
       - CHAT_MODEL=mannix/llama3.1-8b-abliterated
       - BRIDGE_PORT=11435
       - SEARXNG_URL=http://searxng:8080
+      - CHROMADB_URL=http://chromadb:8000
     depends_on:
       - ollama
       - searxng
+      - chromadb
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma
+    container_name: chromadb
+    volumes:
+      - chroma_data:/chroma/chroma
     restart: unless-stopped
 
 volumes:
   ollama_data:
+  chroma_data:

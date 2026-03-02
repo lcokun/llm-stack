@@ -6,8 +6,10 @@ A self-hosted LLM stack running in Docker with GPU acceleration. Chains an ablit
 
 ```
 oterm --> Vision Bridge (:11435) --> Ollama (:11434)
-               |         |              |
-               |         |              +-- runs models on GPU
+               |         |    |          |
+               |         |    |          +-- runs models on GPU
+               |         |    |
+               |         |    +-- /rag prefix? --> ChromaDB --> inject docs
                |         |
                |         +-- /search prefix? --> SearXNG --> inject results
                |
@@ -17,8 +19,9 @@ oterm --> Vision Bridge (:11435) --> Ollama (:11434)
 ```
 
 **Ollama** -- model server with NVIDIA GPU passthrough
-**Vision Bridge** -- Python proxy that detects images and search queries, chains models together
+**Vision Bridge** -- Python proxy that detects images, search queries, and RAG lookups
 **SearXNG** -- private, self-hosted metasearch engine
+**ChromaDB** -- vector database for document storage and retrieval
 **oterm** -- terminal UI client for chatting
 
 ## Quick Start
@@ -86,6 +89,24 @@ Prefix any message with `/search` to trigger a web search:
 
 The bridge queries SearXNG, injects the top 5 results into context, and forwards everything to the chat model.
 
+### RAG (document Q&A)
+
+Ingest a file into ChromaDB:
+```
+/ingest /data/Documents/report.pdf
+```
+
+Then ask questions about your ingested documents:
+```
+/rag what did the report say about budgets?
+```
+
+The bridge embeds your query, finds the most relevant chunks from ChromaDB, and injects them as context.
+
+Supported file types: PDF, DOCX, XLSX, PPTX, CSV, TXT, Markdown.
+
+**Note:** `/ingest` can only read files on the workstation (mounted at `/data`). To ingest files from a remote machine, copy them to the workstation first.
+
 ## Swapping Models
 
 Pull your preferred models and update `docker-compose.yml`:
@@ -112,8 +133,9 @@ Browse available models at [ollama.com/library](https://ollama.com/library).
 | Service | Port | Description |
 |---------|------|-------------|
 | Ollama | 11434 | Model server API |
-| Vision Bridge | 11435 | Proxy API (vision + search) |
+| Vision Bridge | 11435 | Proxy API (vision + search + RAG) |
 | SearXNG | internal | Metasearch engine (not exposed) |
+| ChromaDB | internal | Vector database (not exposed) |
 
 ## Default Models
 
@@ -121,6 +143,7 @@ Browse available models at [ollama.com/library](https://ollama.com/library).
 |-------|---------|------|
 | `mannix/llama3.1-8b-abliterated` | Main chat (uncensored) | ~5 GB |
 | `llama3.2-vision:11b` | Image understanding | ~8 GB |
+| `nomic-embed-text` | Document embeddings (RAG) | ~274 MB |
 
 ## Roadmap
 
@@ -130,4 +153,4 @@ Browse available models at [ollama.com/library](https://ollama.com/library).
 - [x] SearXNG search integration
 - [x] Unified Docker Compose
 - [x] Tailscale access
-- [ ] RAG pipeline
+- [x] RAG pipeline (partial -- ingestion limited to workstation files)
