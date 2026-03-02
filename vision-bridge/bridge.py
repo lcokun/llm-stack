@@ -2,6 +2,7 @@
 
 import json
 import os
+from urllib.parse import quote_plus
 
 from aiohttp import web, ClientSession
 
@@ -9,6 +10,26 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 VISION_MODEL = os.environ.get("VISION_MODEL", "llama3.2-vision:11b")
 CHAT_MODEL = os.environ.get("CHAT_MODEL", "mannix/llama3.1-8b-abliterated")
 BRIDGE_PORT = int(os.environ.get("BRIDGE_PORT", "11435"))
+SEARXNG_URL = os.environ.get("SEARXNG_URL", "http://searxng:8080")
+
+async def search_searxng(session: ClientSession, query: str) -> str:
+    """Query SearXNG and return formatted results."""
+    url = f"{SEARXNG_URL}/search?q={quote_plus(query)}&format=json"
+    async with session.get(url) as resp:
+        data = await resp.json()
+
+    results = data.get("results", [])[:5]
+    if not results:
+        return "No results found."
+
+    lines = []
+    for i, r in enumerate(results, 1):
+        title = r.get("title", "")
+        link = r.get("url", "")
+        snippet = r.get("content", "")
+        lines.append(f"{i}. {title}\n   {link}\n   {snippet}")
+    return "\n\n".join(lines)
+
 
 async def call_vision_model(session: ClientSession, messages: list) -> str:
     """Send messages (with images) to the vision model, return its text response."""
@@ -33,6 +54,20 @@ async def handle_chat(request: web.Request) -> web.StreamResponse:
     body = await request.json()
     messages = body.get("messages", [])
     last_user = find_last_user_message(messages)
+
+    if last_user and isinstance(last_user.get("content"), str) and last_user["content"].startswith("/search "):
+        # --- Search detected: query SearXNG ---
+        query = last_user["content"][len("/search "):].strip()
+        print(f"Search detected, querying SearXNG for: {query}")
+
+        async with ClientSession() as session:
+            search_results = await search_searxng(session, query)
+
+        print(f"Search results: {search_results[:120]}...")
+
+        last_user["content"] = (
+            f"[Web search results for '{query}':\n{search_results}]\n\n{query}"
+        )
 
     if last_user and last_user.get("images"):
         # --- Image detected: call vision model first ---
@@ -71,6 +106,21 @@ async def handle_chat(request: web.Request) -> web.StreamResponse:
 
     await stream_response.write_eof()
     return stream_response
+
+ALLOWED_MODELS = {VISION_MODEL, CHAT_MODEL}
+
+async def handle_tags(request: web.Request) -> web.Response:
+    """Filter /api/tags to only show the vision and chat models."""
+    async with ClientSession() as session:
+        async with session.get(f"{OLLAMA_URL}/api/tags") as resp:
+            data = await resp.json()
+
+    data["models"] = [
+        m for m in data.get("models", [])
+        if m.get("name") in ALLOWED_MODELS or m.get("model") in ALLOWED_MODELS
+    ]
+    return web.json_response(data)
+
 
 async def passthrough(request: web.Request) -> web.Response:
     """Catch-all: forward any other request to Ollama unchanged."""
@@ -116,12 +166,14 @@ def main():
     
     # Specific route first, catch-all second
     app.router.add_post("/api/chat", handle_chat)
+    app.router.add_get("/api/tags", handle_tags)
     app.router.add_route("*", "/{path:.*}", passthrough)
 
     print(f"Vision Bridge starting on port {BRIDGE_PORT}")
     print(f"  Ollama URL:   {OLLAMA_URL}")
     print(f"  Vision model: {VISION_MODEL}")
     print(f"  Chat model:   {CHAT_MODEL}")
+    print(f"  SearXNG URL:  {SEARXNG_URL}")
 
     web.run_app(app, host="0.0.0.0", port=BRIDGE_PORT)
 

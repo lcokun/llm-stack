@@ -17,6 +17,15 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
+  searxng:
+    image: searxng/searxng
+    container_name: searxng
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - ./searxng/limiter.toml:/etc/searxng/limiter.toml:ro
+      - ./searxng/uwsgi.ini:/etc/searxng/uwsgi.ini:ro
+    restart: unless-stopped
+
   vision-bridge:
     build: ./vision-bridge
     container_name: vision-bridge
@@ -27,8 +36,10 @@ services:
       - VISION_MODEL=llama3.2-vision:11b
       - CHAT_MODEL=mannix/llama3.1-8b-abliterated
       - BRIDGE_PORT=11435
+      - SEARXNG_URL=http://searxng:8080
     depends_on:
       - ollama
+      - searxng
     restart: unless-stopped
 
 volumes:
