@@ -115,9 +115,12 @@ async def handle_tags(request: web.Request) -> web.Response:
         async with session.get(f"{OLLAMA_URL}/api/tags") as resp:
             data = await resp.json()
 
+    def matches_allowed(name: str) -> bool:
+        return name in ALLOWED_MODELS or name.rsplit(":", 1)[0] in ALLOWED_MODELS
+
     data["models"] = [
         m for m in data.get("models", [])
-        if m.get("name") in ALLOWED_MODELS or m.get("model") in ALLOWED_MODELS
+        if matches_allowed(m.get("name", "")) or matches_allowed(m.get("model", ""))
     ]
     return web.json_response(data)
 
