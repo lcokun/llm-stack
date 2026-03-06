@@ -2,6 +2,7 @@
 
 import json
 import os
+import tempfile
 from urllib.parse import quote_plus
 
 from aiohttp import web, ClientSession
@@ -216,12 +217,42 @@ async def passthrough(request: web.Request) -> web.Response:
                 headers={"Content-Type": resp.headers.get("Content-Type", "application/json")},
             )
 
+async def handle_upload(request: web.Request) -> web.Response:
+    """Accept a multipart file upload and ingest it into ChromaDB"""
+    reader = await request.multipart()
+    part = await reader.next()
+
+    if part is None or part.filename is None:
+        return web.json_response({"error": "No file uploaded"}, status=400)
+
+    filename = part.filename
+    print(f"Upload received: {filename}")
+
+    # Write to temp file, preserving the extension for ingest_file's format check
+    suffix = os.path.splitext(filename)[1]
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    try:
+        while True:
+            chunk = await part.read_chunk()
+            if not chunk:
+                break
+            tmp.write(chunk)
+        tmp.close()
+
+        count = await ingest_file(tmp.name, OLLAMA_URL)
+        return web.json_response({"status": "ok", "file": filename, "chunks": count})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+    finally:
+        os.unlink(tmp.name)
+
 def main():
     app = web.Application(client_max_size=50 * 1024 * 1024)  # 50 MB
     
     # Specific route first, catch-all second
     app.router.add_post("/api/chat", handle_chat)
     app.router.add_get("/api/tags", handle_tags)
+    app.router.add_post("/api/ingest", handle_upload)
     app.router.add_route("*", "/{path:.*}", passthrough)
 
     print(f"Vision Bridge starting on port {BRIDGE_PORT}")

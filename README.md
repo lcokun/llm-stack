@@ -91,9 +91,14 @@ The bridge queries SearXNG, injects the top 5 results into context, and forwards
 
 ### RAG (document Q&A)
 
-Ingest a file into ChromaDB:
+Ingest a file on the workstation:
 ```
 /ingest /data/Documents/report.pdf
+```
+
+Or upload a file from any remote device:
+```bash
+curl -F "file=@report.pdf" http://<host>:11435/api/ingest
 ```
 
 Then ask questions about your ingested documents:
@@ -104,8 +109,6 @@ Then ask questions about your ingested documents:
 The bridge embeds your query, finds the most relevant chunks from ChromaDB, and injects them as context.
 
 Supported file types: PDF, DOCX, XLSX, PPTX, CSV, TXT, Markdown.
-
-**Note:** `/ingest` can only read files on the workstation (mounted at `/data`). To ingest files from a remote machine, copy them to the workstation first.
 
 ## Swapping Models
 
@@ -153,4 +156,4 @@ Browse available models at [ollama.com/library](https://ollama.com/library).
 - [x] SearXNG search integration
 - [x] Unified Docker Compose
 - [x] Tailscale access
-- [x] RAG pipeline (partial -- ingestion limited to workstation files)
+- [x] RAG pipeline (with remote file upload)
