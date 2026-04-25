@@ -9,8 +9,18 @@ import chromadb
 
 # --- Connect to ChromaDB ---
 
-chroma = chromadb.HttpClient(host="chromadb", port=8000)
-collection = chroma.get_or_create_collection("documents")
+import os
+CHROMADB_HOST = os.environ.get("CHROMADB_HOST", "chromadb")
+
+_chroma = None
+_collection = None
+
+def get_collection():
+    global _chroma, _collection
+    if _collection is None:
+        _chroma = chromadb.HttpClient(host=CHROMADB_HOST, port=8000)
+        _collection = _chroma.get_or_create_collection("documents")
+    return _collection
 
 # --- File Readers
 # Each one takes a file path and returns a single string of text
@@ -105,7 +115,7 @@ async def ingest_file(path, ollama_url):
             embedding = await get_embedding(session, chunk, ollama_url)
             doc_id = f"{filename}_chunk_{i}"
 
-            collection.upsert(
+            get_collection().upsert(
                 ids=[doc_id],
                 embeddings=[embedding],
                 documents=[chunk],

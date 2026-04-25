@@ -7,7 +7,7 @@ from urllib.parse import quote_plus
 
 from aiohttp import web, ClientSession
 
-from ingest import ingest_file, get_embedding, collection
+from ingest import ingest_file, get_embedding, get_collection
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://ollama:11434")
 VISION_MODEL = os.environ.get("VISION_MODEL", "llama3.2-vision:11b")
@@ -93,7 +93,7 @@ async def handle_chat(request: web.Request) -> web.StreamResponse:
         async with ClientSession() as session:
             query_embedding = await get_embedding(session, query, OLLAMA_URL)
 
-        results = collection.query(
+        results = get_collection().query(
             query_embeddings=[query_embedding],
             n_results=5,
         )
