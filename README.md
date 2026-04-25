@@ -42,7 +42,8 @@ docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
 ```bash
 git clone https://github.com/lcokun/llm-stack.git
 cd llm-stack
-docker compose up --build -d
+docker build --network host -t local-llm-vision-bridge ./vision-bridge
+docker compose up -d
 ```
 
 ### Pull models
@@ -50,6 +51,7 @@ docker compose up --build -d
 ```bash
 docker exec ollama ollama pull mannix/llama3.1-8b-abliterated
 docker exec ollama ollama pull llama3.2-vision:11b
+docker exec ollama ollama pull nomic-embed-text
 ```
 
 ### Install oterm and chat
@@ -133,12 +135,14 @@ Browse available models at [ollama.com/library](https://ollama.com/library).
 
 ## Services
 
+All services run with host networking (no Docker port mapping).
+
 | Service | Port | Description |
 |---------|------|-------------|
 | Ollama | 11434 | Model server API |
 | Vision Bridge | 11435 | Proxy API (vision + search + RAG) |
-| SearXNG | internal | Metasearch engine (not exposed) |
-| ChromaDB | internal | Vector database (not exposed) |
+| SearXNG | 8080 | Metasearch engine |
+| ChromaDB | 8000 | Vector database |
 
 ## Default Models
 
