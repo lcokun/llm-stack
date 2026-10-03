@@ -20,3 +20,15 @@ fmt:
 # Run the python test suite.
 test:
     cd services/core && uv run pytest
+
+# Start the development stack.
+dev:
+    docker compose up -d
+
+# Stop the development stack.
+down:
+    docker compose down
+
+# Apply pending database migrations.
+migrate:
+    dbmate --migrations-dir db/migrations up
