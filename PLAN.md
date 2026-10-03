@@ -52,8 +52,8 @@ Checked 2026-10-03. Anything not listed here is training-era knowledge and unver
 | uv 0.9.3 | installed |
 | node 26.8.1 / npm 12.0.2 | installed |
 | psql 18.6 (client) | installed |
-| **go** | **not installed, phase 0** |
-| **just** | **not installed, phase 0** |
+| go 1.27.0 | installed |
+| just 1.58.0 | installed |
 | GPU | RTX 4070 Laptop, **8188 MiB** |
 
 System Python is 3.14.7. **Pin the project to 3.12 or 3.13 via `uv`.** The
@@ -65,20 +65,30 @@ lags new CPython minors on prebuilt wheels.
 Ordered so Go lands in month one and Rust in month two, so neither sits behind a phase
 that might never arrive, and so every phase ends with something deployed and running.
 
-### Phase 0 — foundations
-- [ ] install Go and `just`
-- [ ] `justfile` with `dev`, `test`, `lint`, `migrate`
-- [ ] repo layout per [ADR 0008](docs/decisions/0008-monorepo-layout.md)
-- [ ] `api/openapi.yaml`, the contract, written before implementations
-- [ ] `FakeClient` inference server
-- [ ] CI skeleton with path filters
-- [ ] branch protection on `main` *(Mel, GitHub settings)*
-- [ ] `.gitignore` rewrite, README accuracy pass, delete `vision-bridge/` and
-      `Modelfile.tools` *(gated on the `v1-legacy` tag; Mel)*
+### Phase 0 — foundations · **complete 2026-10-03**
+- [x] install Go and `just`
+- [x] `justfile` with `lint`, `fmt`, `test`; `dev` and `migrate` arrive with the
+      services they run
+- [x] repo layout per [ADR 0008](docs/decisions/0008-monorepo-layout.md); directories
+      appear in git as they gain files
+- [x] `api/openapi.yaml`, the contract, written before implementations, scoped to
+      the phase 1 surface only
+- [x] `FakeClient` behind the `InferenceClient` seam, with its contract tests
+- [x] CI running `lint` and `test` on every PR, both required checks
+- [x] branch protection on `main` *(Mel, GitHub settings)*
+- [x] `.gitignore` rewrite, README accuracy pass, delete `vision-bridge/`,
+      `Modelfile.tools` and `docker-compose.yml`; `searxng/` moved to `deploy/`
+
+**Deferred out of phase 0, on purpose.** CI path filters: a path-filtered job that is
+also a required status check never reports on PRs that miss those paths, which leaves
+them permanently unmergeable. They arrive with the aggregate job once Go or Rust make CI
+slow enough to pay for it. A type checker in CI is the other known gap, since
+Pyright currently runs only in the editor.
 
 ### Phase 1 — thin vertical slice · Python
-- [ ] Postgres in compose, pinned; `db/migrations/` with a standalone migration step
-- [ ] schema: `documents`, `chunks`, `jobs`, `conversations`, `messages`
+- [x] Postgres in compose, pinned; `db/migrations/` with a standalone migration step
+      via dbmate
+- [x] schema: `documents`, `chunks`, `jobs`, `conversations`, `messages`
 - [ ] chat end-to-end: own API → `core` → `FakeClient` → streamed response
 - [ ] `api/` ÷ `core/` boundary, `core/` HTTP-free
 - [ ] structured logging, `/metrics`, `/healthz`
@@ -183,9 +193,9 @@ that might never arrive, and so every phase ends with something deployed and run
 | OCR engine: Tesseract or VLM-based | phase 6 |
 | Default chat model | phase 5b, by eval numbers |
 | Full v2 README | when there is a running system to document |
-| `.gitignore` rewrite + README accuracy pass | with the deletion commit |
-| Empty `services/`, `apps/`, `db/`, `deploy/` trees | phase 0 |
-| CI | phase 0 |
+| CI path filters + aggregate job | phase 2, when Go makes CI slow |
+| Type checking in CI | phase 1, alongside the first real `core` code |
+| `ChatEvent` unreferenced, so generators may skip it | phase 2, via the generator's emit-all flag |
 
 ## Concepts
 
