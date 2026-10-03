@@ -1,0 +1,188 @@
+openapi: 3.1.0
+
+info:
+  title: llm-stack API
+  version: 0.1.0
+  description: |
+    The llm-stack service API. Phase 1 covers conversations and streamed chat;
+    documents, jobs and citations arrive in later phases.
+
+servers:
+  - url: http://localhost:8000
+    description: local development
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      operationId: getHealth
+      responses:
+        "200":
+          description: The service is running.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /conversations:
+    post:
+      summary: Create a conversation
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: [string, "null"]
+                  maxLength: 200
+      responses:
+        "201":
+          description: The conversation was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{id}:
+    get:
+      summary: Fetch a conversation with its messages
+      operationId: getConversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: The conversation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "404":
+          description: No conversation with that id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /conversations/{id}/messages:
+    post:
+      summary: Append a user message and stream the assistant reply
+      operationId: createMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: |
+            An SSE stream. Each event is a `data:` line holding one JSON
+            ChatEvent, terminated by a blank line. The stream ends with an
+            event of type `done`.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          description: No conversation with that id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+components:
+  schemas:
+
+    Conversation:
+      type: object
+      required: [id, created_at, messages]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: [string, "null"]
+          maxLength: 200
+        created_at:
+          type: string
+          format: date-time
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+
+    Message:
+      type: object
+      required: [id, role, content, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI identifying the problem type.
+        title:
+          type: string
+          description: Short human-readable summary, stable per type.
+        status:
+          type: integer
+        detail:
+          type: string
+          description: Explanation specific to this occurrence.
+
+    ChatEvent:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [delta, done, error]
+        delta:
+          type: string
+          description: Text fragment. Present when type is delta.
+        message_id:
+          type: string
+          format: uuid
+          description: Id of the stored assistant message. Present when type is done.
+        problem:
+          $ref: "#/components/schemas/Problem"
+          description: Present when type is error.
