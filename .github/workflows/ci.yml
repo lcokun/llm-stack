@@ -21,3 +21,11 @@ jobs:
       - uses: astral-sh/setup-uv@v10.2.0
       - uses: extractions/setup-just@v4
       - run: just lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: extractions/setup-just@v4
+      - run: just test
+
