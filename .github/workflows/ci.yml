@@ -23,9 +23,40 @@ jobs:
       - run: just lint
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg18
+        env:
+          POSTGRES_USER: llmstack
+          POSTGRES_PASSWORD: llmstack
+          POSTGRES_DB: llmstack
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U llmstack -d llmstack"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://llmstack:llmstack@127.0.0.1:5432/llmstack?sslmode=disable
+
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
       - uses: extractions/setup-just@v4
+
+      - name: Install dbmate
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL -o "$HOME/.local/bin/dbmate" \
+            https://github.com/amacneil/dbmate/releases/download/v2.35.1/dbmate-linux-amd64
+          echo "5f1371fdf2d2798f089832ca73ac42d02694f8e07ed11523ca25a79a1fa9364c  $HOME/.local/bin/dbmate" | sha256sum --check
+          chmod +x "$HOME/.local/bin/dbmate"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - run: just migrate
       - run: just test
+
 
