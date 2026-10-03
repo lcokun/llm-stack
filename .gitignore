@@ -1,6 +1,15 @@
-ROADMAP.md
+# local-only working files
+*.local.md
+CLAUDE.md
+
+# screenshots and scratch images
 *.png
 *.jpg
 *.jpeg
 *.gif
 *.webp
+
+# secrets
+.env
+.env.*
+!.env.example
