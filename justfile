@@ -7,11 +7,16 @@ set dotenv-load := true
 default:
     @just --list
 
+# Type-check the Python sources.
+typecheck:
+    uv run --project services/core pyright
+
 # Validate the OpenAPI contract and the Python sources.
 lint:
     uv run --with openapi-spec-validator==0.9.0 openapi-spec-validator api/openapi.yaml
     cd services/core && uv run ruff check .
     cd services/core && uv run ruff format --check .
+    uv run --project services/core pyright
 
 # Format the Python sources in place.
 fmt:

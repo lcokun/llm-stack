@@ -1,0 +1,7 @@
+{
+    "typeCheckingMode": "standard",
+    "pythonVersion": "3.13",
+    "include": ["services/core/src", "services/core/tests"],
+    "venvPath": "services/core",
+    "venv": ".venv"
+}
