@@ -1,163 +1,66 @@
-# LLM Stack
+# llm-stack
 
-A self-hosted LLM stack running in Docker with GPU acceleration. Chains an abliterated (uncensored) model with a vision model and web search through a transparent proxy.
+A self-hosted LLM service with chat, document retrieval and web search, built to run on
+one box with production-grade operations.
 
-## Architecture
+> **v2 is in active design. There is nothing to install yet.**
+>
+> v1 was a 400-line aiohttp proxy that impersonated the Ollama API. It worked, but its
+> architecture had no way to carry documents, jobs, citations or users, so it is being
+> replaced instead of patched.
+>
+> - [PLAN.md](PLAN.md) for the target architecture, phases and constraints
+> - [docs/decisions/](docs/decisions/) for why the architecture is shaped this way
+> - [docs/concepts/](docs/concepts/) for notes on the ideas behind it
+
+## Target architecture
 
 ```
-oterm --> Vision Bridge (:11435) --> Ollama (:11434)
-               |         |    |          |
-               |         |    |          +-- runs models on GPU
-               |         |    |
-               |         |    +-- /rag prefix? --> ChromaDB --> inject docs
-               |         |
-               |         +-- /search prefix? --> SearXNG --> inject results
-               |
-               +-- image detected? --> vision model --> inject description
-               |
-               +-- otherwise --> pass through to chat model
+Tauri shell (Rust) ─┐
+browser / PWA ──────┼──▶  gateway (Go)  ──▶  core (Python)  ──▶  Ollama
+any OpenAI client ──┘     auth, rate limit,   tool calling,       SearXNG
+                          SSE, static files,  RAG, prompts,
+                          audit, metrics      model registry
+                                 │                   │
+                                 └──▶  jobs  ──▶  worker (Rust)
+                                                 parse → chunk → embed → upsert
+                                                        │
+                                      Postgres + pgvector
 ```
 
-**Ollama** -- model server with NVIDIA GPU passthrough
-**Vision Bridge** -- Python proxy that detects images, search queries, and RAG lookups
-**SearXNG** -- private, self-hosted metasearch engine
-**ChromaDB** -- vector database for document storage and retrieval
-**oterm** -- terminal UI client for chatting
+Two processes and one database. Go at the edge, Python for orchestration, Rust for the
+ingest worker and the desktop shell. Postgres is the single source of truth: vectors, job
+queue and application data all live there. That choice is argued in
+[ADR 0002](docs/decisions/0002-postgres-pgvector-not-qdrant.md) and
+[ADR 0005](docs/decisions/0005-postgres-as-the-queue.md).
 
-## Quick Start
+## Planned features
 
-### Prerequisites
+- chat with streaming responses, over an API of its own plus an OpenAI-compatible endpoint
+- document ingest for PDF, DOCX, XLSX, PPTX, CSV, text, and images via OCR, run as
+  background jobs with progress
+- retrieval with hybrid search, reranking and citations that resolve to source and page
+- web search through a self-hosted SearXNG, with result pages fetched and cleaned
+- native multimodal vision, with a tool-based fallback for text-only models
+- auth, per-user rate limits and model routing
+- tracing, metrics, dashboards, alerting, tested backups and runbooks
 
-- NVIDIA GPU with sufficient VRAM (tested on RTX 5000 Ada 32GB)
-- [Docker Engine](https://docs.docker.com/engine/install/) + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
-- Python 3.10+ (for oterm)
+## Running v1
 
-Verify GPU access in Docker:
-```bash
-docker run --rm --gpus all nvidia/cuda:12.4.0-base-ubuntu22.04 nvidia-smi
-```
-
-### Start the stack
-
-```bash
-git clone https://github.com/lcokun/llm-stack.git
-cd llm-stack
-docker build --network host -t local-llm-vision-bridge ./vision-bridge
-docker compose up -d
-```
-
-### Pull models
-
-```bash
-docker exec ollama ollama pull mannix/llama3.1-8b-abliterated
-docker exec ollama ollama pull llama3.2-vision:11b
-docker exec ollama ollama pull nomic-embed-text
-```
-
-### Install oterm and chat
+v1 is preserved at the `v1-legacy` tag. It is unmaintained, has no authentication, and
+binds every service to `0.0.0.0` with host networking. Do not expose it.
 
 ```bash
-pipx install oterm
+git worktree add ../llm-stack-v1 v1-legacy
+cd ../llm-stack-v1
 ```
 
-Regular chat (direct to Ollama):
-```bash
-oterm
-```
+Its own README there documents the original setup.
 
-Vision + search enabled chat (through the bridge):
-```bash
-OLLAMA_HOST=127.0.0.1:11435 oterm
-```
+## Status
 
-## Features
+Design complete, implementation not started. See [PLAN.md](PLAN.md) for the current phase.
 
-### Vision chaining
+## Licence
 
-Send an image with your message. The bridge:
-1. Detects the image in the request
-2. Sends it to the vision model for a description
-3. Strips the image and prepends `[Image description: ...]` to your message
-4. Forwards the enriched text to the abliterated model
-
-The abliterated model never sees the image directly -- it gets a text description plus your question.
-
-### Web search
-
-Prefix any message with `/search` to trigger a web search:
-```
-/search latest news about local LLMs
-```
-
-The bridge queries SearXNG, injects the top 5 results into context, and forwards everything to the chat model.
-
-### RAG (document Q&A)
-
-Ingest a file on the workstation:
-```
-/ingest /data/Documents/report.pdf
-```
-
-Or upload a file from any remote device:
-```bash
-curl -F "file=@report.pdf" http://<host>:11435/api/ingest
-```
-
-Then ask questions about your ingested documents:
-```
-/rag what did the report say about budgets?
-```
-
-The bridge embeds your query, finds the most relevant chunks from ChromaDB, and injects them as context.
-
-Supported file types: PDF, DOCX, XLSX, PPTX, CSV, TXT, Markdown.
-
-## Swapping Models
-
-Pull your preferred models and update `docker-compose.yml`:
-
-```bash
-docker exec ollama ollama pull <your-chat-model>
-docker exec ollama ollama pull <your-vision-model>
-```
-
-```yaml
-environment:
-  - CHAT_MODEL=<your-chat-model>
-  - VISION_MODEL=<your-vision-model>
-```
-
-```bash
-docker compose up -d vision-bridge
-```
-
-Browse available models at [ollama.com/library](https://ollama.com/library).
-
-## Services
-
-All services run with host networking (no Docker port mapping).
-
-| Service | Port | Description |
-|---------|------|-------------|
-| Ollama | 11434 | Model server API |
-| Vision Bridge | 11435 | Proxy API (vision + search + RAG) |
-| SearXNG | 8080 | Metasearch engine |
-| ChromaDB | 8000 | Vector database |
-
-## Default Models
-
-| Model | Purpose | Size |
-|-------|---------|------|
-| `mannix/llama3.1-8b-abliterated` | Main chat (uncensored) | ~5 GB |
-| `llama3.2-vision:11b` | Image understanding | ~8 GB |
-| `nomic-embed-text` | Document embeddings (RAG) | ~274 MB |
-
-## Roadmap
-
-- [x] Docker + GPU passthrough
-- [x] Ollama + oterm
-- [x] Vision Bridge proxy
-- [x] SearXNG search integration
-- [x] Unified Docker Compose
-- [x] Tailscale access
-- [x] RAG pipeline (with remote file upload)
+MIT. See [LICENSE](LICENSE).
