@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "llm-stack orchestration core: inference, retrieval, prompts."
 requires-python = ">=3.13,<3.14"
 dependencies = [
+  "psycopg[binary,pool]==3.3.6",
   "pydantic-settings==2.15.0",
 ]
+
 
 [dependency-groups]
 dev = [
