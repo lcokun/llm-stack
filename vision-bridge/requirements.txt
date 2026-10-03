@@ -1,6 +1,0 @@
-aiohttp>=3.9,<4
-chromadb-client
-pymupdf
-python-docx
-openpyxl
-python-pptx
