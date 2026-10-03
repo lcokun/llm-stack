@@ -7,6 +7,9 @@ set dotenv-load := true
 default:
     @just --list
 
+# Everything CI runs.
+check: lint test
+
 # Type-check the Python sources.
 typecheck:
     uv run --project services/core pyright
@@ -22,7 +25,6 @@ lint:
 fmt:
     cd services/core && uv run ruff format .
     cd services/core && uv run ruff check --fix .
-
 
 # Run the python test suite.
 test:
