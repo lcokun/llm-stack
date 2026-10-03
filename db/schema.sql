@@ -38,7 +38,7 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.chunks (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     document_id uuid NOT NULL,
     ordinal integer NOT NULL,
     text text NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE public.chunks (
 --
 
 CREATE TABLE public.conversations (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     title text,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -63,7 +63,7 @@ CREATE TABLE public.conversations (
 --
 
 CREATE TABLE public.documents (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     filename text NOT NULL,
     source_path text NOT NULL,
     sha256 text NOT NULL,
@@ -118,7 +118,7 @@ ALTER SEQUENCE public.jobs_id_seq OWNED BY public.jobs.id;
 --
 
 CREATE TABLE public.messages (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    id uuid DEFAULT uuidv7() NOT NULL,
     conversation_id uuid NOT NULL,
     role text NOT NULL,
     content text NOT NULL,
@@ -256,4 +256,5 @@ ALTER TABLE ONLY public.messages
 --
 
 INSERT INTO public.schema_migrations (version) VALUES
-    ('20261003162111');
+    ('20261003162111'),
+    ('20261003181703');
