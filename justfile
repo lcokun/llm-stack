@@ -5,6 +5,18 @@
 default:
     @just --list
 
-# Validate the OpenAPI contract.
+# Validate the OpenAPI contract and the Python sources.
 lint:
     uv run --with openapi-spec-validator==0.9.0 openapi-spec-validator api/openapi.yaml
+    cd services/core && uv run ruff check .
+    cd services/core && uv run ruff format --check .
+
+# Format the Python sources in place.
+fmt:
+    cd services/core && uv run ruff format .
+    cd services/core && uv run ruff check --fix .
+
+
+# Run the python test suite.
+test:
+    cd services/core && uv run pytest
