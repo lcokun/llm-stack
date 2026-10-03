@@ -206,3 +206,4 @@ Learning notes written as each idea landed:
 - [vram-budget.md](docs/concepts/vram-budget.md)
 - [streaming-ndjson-sse-websockets.md](docs/concepts/streaming-ndjson-sse-websockets.md)
 - [git-workflow.md](docs/concepts/git-workflow.md)
+- [ids-and-ordering.md](docs/concepts/ids-and-ordering.md)
