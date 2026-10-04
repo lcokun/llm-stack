@@ -89,11 +89,16 @@ Pyright currently runs only in the editor.
 - [x] Postgres in compose, pinned; `db/migrations/` with a standalone migration step
       via dbmate
 - [x] schema: `documents`, `chunks`, `jobs`, `conversations`, `messages`
-- [ ] chat end-to-end: own API → `core` → `FakeClient` → streamed response
-- [ ] `api/` ÷ `core/` boundary, `core/` HTTP-free
-- [ ] structured logging, `/metrics`, `/healthz`
-- [ ] one end-to-end test in CI
+- [x] chat end-to-end: own API → `core` → `FakeClient` → streamed response as SSE
+- [x] `api/` ÷ `core/` boundary, `core/` HTTP-free, enforced by a test that parses
+      every core module for forbidden imports
+- [ ] structured logging and `/metrics`; `/healthz` done
+- [x] one end-to-end test in CI, against a pgvector service container with migrations
+      applied as their own step
 - [ ] swap `FakeClient` for Ollama and confirm parity
+
+Responses are validated against `api/openapi.yaml` in the test suite, so hand-written
+models cannot drift from the contract without failing CI.
 
 ### Phase 2 — extract the gateway · **Go**
 - [ ] port `api/` to Go while it is ~200 lines
