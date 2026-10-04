@@ -6,7 +6,7 @@ Nothing in here knows about HTTP, Ollama, or any particular backend.
 
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
-from typing import Literal, Protocol, runtime_checkable
+from typing import ClassVar, Literal, Protocol, runtime_checkable
 
 Role = Literal["system", "user", "assistant"]
 
@@ -35,6 +35,9 @@ class UnknownModelError(Exception):
 @runtime_checkable
 class InferenceClient(Protocol):
     """The seam between the orchestration and whatever serves the models."""
+
+    backend: ClassVar[str]
+    """Which backend this is. A metric label, so keep it short and stable."""
 
     def chat(self, messages: Sequence[Message], model: str) -> AsyncIterator[str]:
         """Stream the assistant's reply as text fragments."""
