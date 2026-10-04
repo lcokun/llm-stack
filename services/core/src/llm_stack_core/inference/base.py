@@ -4,7 +4,7 @@ Everything above this module talks to models through 'InferenceClient'.
 Nothing in here knows about HTTP, Ollama, or any particular backend.
 """
 
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncGenerator, Sequence
 from dataclasses import dataclass
 from typing import ClassVar, Literal, Protocol, runtime_checkable
 
@@ -39,7 +39,7 @@ class InferenceClient(Protocol):
     backend: ClassVar[str]
     """Which backend this is. A metric label, so keep it short and stable."""
 
-    def chat(self, messages: Sequence[Message], model: str) -> AsyncIterator[str]:
+    def chat(self, messages: Sequence[Message], model: str) -> AsyncGenerator[str]:
         """Stream the assistant's reply as text fragments."""
         ...
 
