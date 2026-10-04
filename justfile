@@ -26,9 +26,9 @@ fmt:
     cd services/core && uv run ruff format .
     cd services/core && uv run ruff check --fix .
 
-# Run the python test suite.
-test:
-    cd services/core && uv run pytest
+# Run the python test suite. Extra arguments go to pytest.
+test *args:
+    cd services/core && uv run pytest {{args}}
 
 # Start the development stack.
 dev:
