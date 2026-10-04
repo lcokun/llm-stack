@@ -5,6 +5,7 @@ tests leave no rows behind and never observe each other's writes.
 Requires a running database: `just dev`.
 """
 
+import os
 from collections.abc import AsyncIterator
 
 import httpx
@@ -19,6 +20,19 @@ from llm_stack_core.config import get_settings
 from llm_stack_core.conversations.store import ConversationStore
 
 Pool = AsyncConnectionPool[AsyncConnection[TupleRow]]
+
+
+def pytest_configure() -> None:
+    """Tests always run against FakeClient, whatever .env names.
+
+    `just test` loads .env, so a developer pointed at Ollama would otherwise
+    run the whole suite against a GPU model: slow, non-deterministic, and
+    impossible on a CI runner.
+    """
+    os.environ["INFERENCE_BACKEND"] = "fake"
+    os.environ["CHAT_MODEL"] = "fake-chat"
+    os.environ["EMBEDDING_MODEL"] = "fake-embed"
+    get_settings.cache_clear()
 
 
 @pytest_asyncio.fixture
