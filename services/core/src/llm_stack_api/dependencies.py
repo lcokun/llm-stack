@@ -20,7 +20,7 @@ Store = Annotated[ConversationStore, Depends(get_store)]
 
 def get_chat_service(request: Request) -> ChatService:
     """The service built during startup, stored on app state."""
-    return request.app.startup.ChatService
+    return request.app.state.chat_service
 
 
 Chat = Annotated[ChatService, Depends(get_chat_service)]
