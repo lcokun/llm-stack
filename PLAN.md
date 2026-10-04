@@ -34,13 +34,15 @@ code from the first commit and extracted to Go in phase 2, while the port is sma
 
 ## Verified facts
 
-Checked 2026-10-03. Anything not listed here is training-era knowledge and unverified.
+Checked 2026-10-03, extended 2026-10-05. Anything not listed here is training-era
+knowledge and unverified.
 
 | Fact | Status |
 |---|---|
 | `pgvector` **0.8.7** (2026-10-01), supports PostgreSQL 13–18 | primary source |
 | **CVE-2026-3172**, a buffer overflow in parallel HNSW builds, fixed in 0.8.2, so `>= 0.8.2` is a security floor | primary source |
 | **Tauri 2.11.5**, WebKitGTK 4.1 on Linux | primary source |
+| `qwen3:4b` 2.5 GB, tools and thinking, no vision; `nomic-embed-text` 274 MB at 768 dimensions; Ollama returns NDJSON from `/api/chat` and declares capabilities from `/api/show` | primary source, 2026-10-05 |
 | Candidate models: Qwen3-VL-8B ~6 GB @ Q4 (strong at document reading); Qwen3.5-9B Q4_K_M 6.6 GB, Apache 2.0, native vision + tools; Gemma 4 native vision at all sizes | **secondary sources, verify against ollama.com before pulling** |
 
 ### Local toolchain
@@ -82,10 +84,10 @@ that might never arrive, and so every phase ends with something deployed and run
 **Deferred out of phase 0, on purpose.** CI path filters: a path-filtered job that is
 also a required status check never reports on PRs that miss those paths, which leaves
 them permanently unmergeable. They arrive with the aggregate job once Go or Rust make CI
-slow enough to pay for it. A type checker in CI is the other known gap, since
-Pyright currently runs only in the editor.
+slow enough to pay for it. A type checker in CI was the other known gap; Pyright
+joined `just lint` during phase 1, so CI runs it on every PR.
 
-### Phase 1 — thin vertical slice · Python
+### Phase 1 — thin vertical slice · Python · **complete 2026-10-05**
 - [x] Postgres in compose, pinned; `db/migrations/` with a standalone migration step
       via dbmate
 - [x] schema: `documents`, `chunks`, `jobs`, `conversations`, `messages`
@@ -95,7 +97,8 @@ Pyright currently runs only in the editor.
 - [x] structured logging with request-id correlation, and `/metrics`
 - [x] one end-to-end test in CI, against a pgvector service container with migrations
       applied as their own step
-- [ ] swap `FakeClient` for Ollama and confirm parity
+- [x] swap `FakeClient` for Ollama and confirm parity, via one contract suite
+      parametrised over both backends
 
 Responses are validated against `api/openapi.yaml` in the test suite, so hand-written
 models cannot drift from the contract without failing CI.
@@ -199,7 +202,6 @@ models cannot drift from the contract without failing CI.
 | Default chat model | phase 5b, by eval numbers |
 | Full v2 README | when there is a running system to document |
 | CI path filters + aggregate job | phase 2, when Go makes CI slow |
-| Type checking in CI | phase 1, alongside the first real `core` code |
 | `ChatEvent` unreferenced, so generators may skip it | phase 2, via the generator's emit-all flag |
 
 ## Concepts
@@ -213,3 +215,4 @@ Learning notes written as each idea landed:
 - [git-workflow.md](docs/concepts/git-workflow.md)
 - [ids-and-ordering.md](docs/concepts/ids-and-ordering.md)
 - [observability.md](docs/concepts/observability.md)
+- [inference-seam.md](docs/concepts/inference-seam.md)
