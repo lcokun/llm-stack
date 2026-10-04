@@ -179,10 +179,6 @@ components:
         delta:
           type: string
           description: Text fragment. Present when type is delta.
-        message_id:
-          type: string
-          format: uuid
-          description: Id of the stored assistant message. Present when type is done.
         problem:
           $ref: "#/components/schemas/Problem"
           description: Present when type is error.
