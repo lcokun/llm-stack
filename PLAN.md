@@ -92,7 +92,7 @@ Pyright currently runs only in the editor.
 - [x] chat end-to-end: own API → `core` → `FakeClient` → streamed response as SSE
 - [x] `api/` ÷ `core/` boundary, `core/` HTTP-free, enforced by a test that parses
       every core module for forbidden imports
-- [ ] structured logging and `/metrics`; `/healthz` done
+- [x] structured logging with request-id correlation, and `/metrics`
 - [x] one end-to-end test in CI, against a pgvector service container with migrations
       applied as their own step
 - [ ] swap `FakeClient` for Ollama and confirm parity
@@ -212,3 +212,4 @@ Learning notes written as each idea landed:
 - [streaming-ndjson-sse-websockets.md](docs/concepts/streaming-ndjson-sse-websockets.md)
 - [git-workflow.md](docs/concepts/git-workflow.md)
 - [ids-and-ordering.md](docs/concepts/ids-and-ordering.md)
+- [observability.md](docs/concepts/observability.md)
