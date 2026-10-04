@@ -50,6 +50,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Conversation"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
 
   /conversations/{id}:
     get:
@@ -75,6 +77,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
 
   /conversations/{id}/messages:
     post:
@@ -114,6 +118,8 @@ paths:
             application/problem+json:
               schema:
                 $ref: "#/components/schemas/Problem"
+        "422":
+          $ref: "#/components/responses/ValidationProblem"
 
 components:
   schemas:
@@ -182,3 +188,11 @@ components:
         problem:
           $ref: "#/components/schemas/Problem"
           description: Present when type is error.
+
+  responses:
+    ValidationProblem:
+      description: The request did not match the schema.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

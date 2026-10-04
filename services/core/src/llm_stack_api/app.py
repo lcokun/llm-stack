@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from psycopg_pool import AsyncConnectionPool
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(
         ConversationNotFoundError, problems.conversation_not_found
     )
+    app.add_exception_handler(RequestValidationError, problems.validation_failed)
     app.include_router(routes.router)
 
     return app
