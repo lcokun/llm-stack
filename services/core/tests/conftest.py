@@ -7,11 +7,14 @@ Requires a running database: `just dev`.
 
 from collections.abc import AsyncIterator
 
+import httpx
 import pytest_asyncio
+from asgi_lifespan import LifespanManager
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from psycopg_pool import AsyncConnectionPool
 
+from llm_stack_api.app import create_app
 from llm_stack_core.config import get_settings
 from llm_stack_core.conversations.store import ConversationStore
 
@@ -43,3 +46,18 @@ async def pool() -> AsyncIterator[Pool]:
         async with pool.connection() as connection:
             await connection.execute("truncate conversations cascade")
         await pool.close()
+
+
+@pytest_asyncio.fixture
+async def client() -> AsyncIterator[httpx.AsyncClient]:
+    app = create_app()
+    async with LifespanManager(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            try:
+                yield client
+            finally:
+                async with app.state.pool.connection() as connection:
+                    await connection.execute("truncate conversations cascade")
