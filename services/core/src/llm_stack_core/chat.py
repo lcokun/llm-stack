@@ -5,6 +5,7 @@ streams, because a reply takes seconds and a pooled connection held that long
 starves every other request.
 """
 
+import time
 from collections.abc import AsyncGenerator, Sequence
 from uuid import UUID
 
@@ -16,6 +17,11 @@ from llm_stack_core.conversations.store import (
 )
 from llm_stack_core.inference.base import InferenceClient
 from llm_stack_core.inference.base import Message as PrompMessage
+from llm_stack_core.observability import (
+    inference_requests,
+    inference_stream_duration,
+    inference_time_to_first_fragment,
+)
 
 
 class ChatService:
@@ -32,12 +38,27 @@ class ChatService:
         """Stream the assistant's reply, persisting it even if the stream ends early"""
         history = await self._record_user_message(conversation_id, content)
 
+        backend = self._client.backend
         fragments: list[str] = []
+        outcome = "error"
+        started = time.perf_counter()
         try:
             async for fragment in self._client.chat(history, self._model):
+                if not fragments:
+                    inference_time_to_first_fragment.labels(
+                        backend, self._model
+                    ).observe(time.perf_counter() - started)
                 fragments.append(fragment)
                 yield fragment
+            outcome = "ok"
+        except GeneratorExit:
+            outcome = "cancelled"
+            raise
         finally:
+            inference_stream_duration.labels(backend, self._model).observe(
+                time.perf_counter() - started
+            )
+            inference_requests.labels(backend, self._model, outcome).inc()
             if fragments:
                 await self._record_assistant_message(
                     conversation_id, "".join(fragments)

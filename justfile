@@ -38,6 +38,10 @@ dev:
 down:
     docker compose down
 
+#  Run the API in the foreground against the dev database.
+serve:
+    cd services/core && uv run uvicorn llm_stack_api.app:app --port 8000 --reload
+
 # Apply pending database migrations.
 migrate:
     dbmate --migrations-dir db/migrations up

@@ -8,6 +8,7 @@ import hashlib
 import math
 import random
 from collections.abc import AsyncGenerator, Sequence
+from typing import ClassVar
 
 from llm_stack_core.inference.base import Capabilities, Message, UnknownModelError
 
@@ -25,6 +26,8 @@ _MODELS: dict[str, Capabilities] = {
 
 class FakeClient:
     """Echoes the last message back, one fragment at a time."""
+
+    backend: ClassVar[str] = "fake"
 
     async def chat(
         self, messages: Sequence[Message], model: str
