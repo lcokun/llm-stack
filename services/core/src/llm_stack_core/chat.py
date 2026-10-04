@@ -10,13 +10,12 @@ from uuid import UUID
 
 from psycopg_pool import AsyncConnectionPool
 
-from llm_stack_core.conversations.store import ConversationStore
+from llm_stack_core.conversations.store import (
+    ConversationNotFoundError,
+    ConversationStore,
+)
 from llm_stack_core.inference.base import InferenceClient
 from llm_stack_core.inference.base import Message as PrompMessage
-
-
-class ConversationNotFoundError(Exception):
-    """No conversation exists with the given id."""
 
 
 class ChatService:

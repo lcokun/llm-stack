@@ -34,6 +34,10 @@ _INSERT_MESSAGE = """
 """
 
 
+class ConversationNotFoundError(Exception):
+    """No conversation exists with the given id."""
+
+
 class ConversationStore:
     """Conversation persistence over one connection, so one caller owns one transaction."""
 
