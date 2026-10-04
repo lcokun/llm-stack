@@ -2,8 +2,9 @@
 
 import logging
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
+import httpx
 from fastapi import FastAPI, Response
 from fastapi.exceptions import RequestValidationError
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -18,6 +19,7 @@ from llm_stack_core.config import Settings, get_settings
 from llm_stack_core.conversations.store import ConversationNotFoundError
 from llm_stack_core.inference.base import InferenceClient
 from llm_stack_core.inference.fake import FakeClient
+from llm_stack_core.inference.ollama import TIMEOUT, OllamaClient
 from llm_stack_core.observability import configure_logging
 
 Pool = AsyncConnectionPool[AsyncConnection[TupleRow]]
@@ -25,10 +27,14 @@ Pool = AsyncConnectionPool[AsyncConnection[TupleRow]]
 logger = logging.getLogger(__name__)
 
 
-def build_client(settings: Settings) -> InferenceClient:
-    """Choose a backend from the configuration."""
+def build_client(settings: Settings, resources: AsyncExitStack) -> InferenceClient:
+    """Choose a backend, registering anything that needs closing."""
     if settings.inference_backend == "fake":
         return FakeClient()
+    if settings.inference_backend == "ollama":
+        http = httpx.AsyncClient(base_url=settings.ollama_url, timeout=TIMEOUT)
+        resources.push_async_callback(http.aclose)
+        return OllamaClient(http)
     raise NotImplementedError(
         f"inference backend {settings.inference_backend!r} is not implemented yet"
     )
@@ -39,21 +45,23 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     configure_logging(settings.log_level)
 
-    client = build_client(settings)
-    logger.info(
-        "starting",
-        extra={"backend": client.backend, "chat_model": settings.chat_model},
-    )
+    async with AsyncExitStack() as resources:
+        client = build_client(settings, resources)
+        logger.info(
+            "starting",
+            extra={"backend": client.backend, "chat_model": settings.chat_model},
+        )
 
-    pool: Pool = AsyncConnectionPool(str(settings.database_url), open=False)
-    await pool.open(wait=True)
-    app.state.pool = pool
-    app.state.chat_service = ChatService(pool, client, settings.chat_model)
-    try:
-        yield
-    finally:
-        logger.info("stopping")
-        await pool.close()
+        pool: Pool = AsyncConnectionPool(str(settings.database_url), open=False)
+        await pool.open(wait=True)
+        resources.push_async_callback(pool.close)
+
+        app.state.pool = pool
+        app.state.chat_service = ChatService(pool, client, settings.chat_model)
+        try:
+            yield
+        finally:
+            logger.info("stopping")
 
 
 def create_app() -> FastAPI:
