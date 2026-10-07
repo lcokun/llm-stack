@@ -107,7 +107,7 @@ models cannot drift from the contract without failing CI.
 Shape and order per [ADR 0009](docs/decisions/0009-core-keeps-an-internal-http-api.md):
 core keeps an internal HTTP API and the gateway is its only caller.
 - [x] gateway skeleton: env config, `/healthz`, startup errors exit non-zero, Go in CI
-- [ ] gateway reverse-proxies everything to core, so it sits in front first
+- [x] gateway reverse-proxies everything to core, so it sits in front first
 - [ ] core gains the NDJSON form of the messages route
 - [ ] hand-written Go client for core
 - [ ] public routes ported one at a time as explicit handlers: validation against
