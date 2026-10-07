@@ -28,7 +28,11 @@ class Capabilities:
     embedding_dimensions: int | None
 
 
-class UnknownModelError(Exception):
+class InferenceBackendError(Exception):
+    """The backend could not serve the request."""
+
+
+class UnknownModelError(InferenceBackendError):
     """The requested model is not available from this backend."""
 
 
