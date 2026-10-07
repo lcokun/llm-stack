@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 )
@@ -17,6 +18,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "config:", err)
 		os.Exit(1)
 	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.LogLevel})))
 	if err := run(cfg); err != nil {
 		fmt.Fprintln(os.Stderr, "gateway:", err)
 		os.Exit(1)
@@ -24,12 +26,13 @@ func main() {
 }
 
 func run(cfg Config) error {
-	return http.ListenAndServe(cfg.Addr, routes())
+	return http.ListenAndServe(cfg.Addr, routes(newCoreProxy(cfg.CoreURL)))
 }
 
-func routes() http.Handler {
+func routes(core http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
+	mux.Handle("/", core)
 	return mux
 }
 
