@@ -2,10 +2,10 @@
 
 import json
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Header, status
 from fastapi.responses import StreamingResponse
 
 from llm_stack_api.dependencies import Chat, Store
@@ -17,12 +17,17 @@ from llm_stack_api.schemas import (
 from llm_stack_core.conversations.store import ConversationNotFoundError
 
 SSE_MEDIA_TYPE = "text/event-stream"
+NDJSON_MEDIA_TYPE = "application/x-ndjson"
 
 router = APIRouter()
 
 
-def _event(payload: dict[str, Any]) -> str:
+def _sse_line(payload: dict[str, Any]) -> str:
     return f"data: {json.dumps(payload)}\n\n"
+
+
+def _ndjson_line(payload: dict[str, Any]) -> str:
+    return f"{json.dumps(payload)}\n"
 
 
 @router.post("/conversations", status_code=status.HTTP_201_CREATED)
@@ -43,8 +48,15 @@ async def get_conversation(id: UUID, store: Store) -> ConversationResponse:
 
 @router.post("/conversations/{id}/messages")
 async def create_message(
-    id: UUID, body: CreateMessageRequest, chat: Chat
+    id: UUID,
+    body: CreateMessageRequest,
+    chat: Chat,
+    accept: Annotated[str | None, Header()] = None,
 ) -> StreamingResponse:
+    wants_ndjson = accept is not None and NDJSON_MEDIA_TYPE in accept
+    encode = _ndjson_line if wants_ndjson else _sse_line
+    media_type = NDJSON_MEDIA_TYPE if wants_ndjson else SSE_MEDIA_TYPE
+
     stream = chat.send(id, body.content)
 
     # Pull the first fragment here, while a failure can still become a status
@@ -57,11 +69,11 @@ async def create_message(
     async def events() -> AsyncIterator[str]:
         try:
             if first is not None:
-                yield _event({"type": "delta", "delta": first})
+                yield encode({"type": "delta", "delta": first})
             async for fragment in stream:
-                yield _event({"type": "delta", "delta": fragment})
+                yield encode({"type": "delta", "delta": fragment})
         except Exception as error:
-            yield _event(
+            yield encode(
                 {
                     "type": "error",
                     "problem": {
@@ -75,6 +87,6 @@ async def create_message(
             return
         finally:
             await stream.aclose()
-        yield _event({"type": "done"})
+        yield encode({"type": "done"})
 
-    return StreamingResponse(events(), media_type=SSE_MEDIA_TYPE)
+    return StreamingResponse(events(), media_type=media_type)

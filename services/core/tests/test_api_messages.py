@@ -11,6 +11,12 @@ from llm_stack_api.app import create_app
 from llm_stack_core.chat import ChatService
 from llm_stack_core.inference.base import Capabilities, InferenceBackendError, Message
 
+NDJSON = {"Accept": "application/x-ndjson"}
+
+
+def _ndjson_events(body: str) -> list[dict]:
+    return [json.loads(line) for line in body.splitlines() if line]
+
 
 def _events(body: str) -> list[dict]:
     return [
@@ -107,3 +113,33 @@ async def test_unreachable_backend_is_a_502_problem(
 
     assert response.status_code == 502
     assert response.headers["content-type"].startswith("application/problem+json")
+
+
+async def test_streams_ndjson_when_asked(client: httpx.AsyncClient) -> None:
+    conversation = (await client.post("/conversations", json={})).json()
+
+    response = await client.post(
+        f"/conversations/{conversation['id']}/messages",
+        json={"content": "hello"},
+        headers=NDJSON,
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/x-ndjson")
+    events = _ndjson_events(response.text)
+    assert events[-1] == {"type": "done"}
+    assert "".join(e["delta"] for e in events if e["type"] == "delta") == (
+        "You said: hello"
+    )
+
+
+async def test_unknown_conversation_is_404_in_ndjson_too(
+    client: httpx.AsyncClient,
+) -> None:
+    response = await client.post(
+        f"/conversations/{uuid4()}/messages",
+        json={"content": "hello"},
+        headers=NDJSON,
+    )
+
+    assert response.status_code == 404
