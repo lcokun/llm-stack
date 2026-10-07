@@ -17,7 +17,7 @@ from llm_stack_api.middleware import RequestContext
 from llm_stack_core.chat import ChatService
 from llm_stack_core.config import Settings, get_settings
 from llm_stack_core.conversations.store import ConversationNotFoundError
-from llm_stack_core.inference.base import InferenceClient
+from llm_stack_core.inference.base import InferenceBackendError, InferenceClient
 from llm_stack_core.inference.fake import FakeClient
 from llm_stack_core.inference.ollama import TIMEOUT, OllamaClient
 from llm_stack_core.observability import configure_logging
@@ -80,6 +80,7 @@ def create_app() -> FastAPI:
         ConversationNotFoundError, problems.conversation_not_found
     )
     app.add_exception_handler(RequestValidationError, problems.validation_failed)
+    app.add_exception_handler(InferenceBackendError, problems.inference_backend_failed)
     app.include_router(routes.router)
 
     return app

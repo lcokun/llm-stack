@@ -11,7 +11,12 @@ from typing import Any, ClassVar
 
 import httpx
 
-from llm_stack_core.inference.base import Capabilities, Message, UnknownModelError
+from llm_stack_core.inference.base import (
+    Capabilities,
+    InferenceBackendError,
+    Message,
+    UnknownModelError,
+)
 
 CHAT_PATH = "/api/chat"
 EMBED_PATH = "/api/embed"
@@ -25,7 +30,7 @@ NOT_FOUND = 404
 TIMEOUT = httpx.Timeout(connect=5.0, read=300.0, write=10.0, pool=5.0)
 
 
-class OllamaError(Exception):
+class OllamaError(InferenceBackendError):
     """Ollama was unreachable, rejected the request, or answered unexpectedly."""
 
 

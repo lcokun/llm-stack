@@ -1,5 +1,6 @@
 """RFC 9457 problem responses."""
 
+import logging
 from typing import Any
 
 from fastapi import Request
@@ -7,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 PROBLEM_MEDIA_TYPE = "application/problem+json"
+logger = logging.getLogger(__name__)
 
 
 def problem(status: int, title: str, detail: str | None = None) -> JSONResponse:
@@ -34,3 +36,8 @@ async def validation_failed(request: Request, exc: Exception) -> JSONResponse:
             for error in exc.errors()
         )
     return problem(422, "Request validation failed", detail or None)
+
+
+async def inference_backend_failed(request: Request, exc: Exception) -> JSONResponse:
+    logger.warning("Inference backend failed", exc_info=exc)
+    return problem(502, "Inference backend unavailable")

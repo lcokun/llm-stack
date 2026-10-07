@@ -120,6 +120,12 @@ paths:
                 $ref: "#/components/schemas/Problem"
         "422":
           $ref: "#/components/responses/ValidationProblem"
+        "502":
+          description: The inference backend was unreachable or failed before replying.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
 
 components:
   schemas:

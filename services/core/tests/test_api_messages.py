@@ -1,7 +1,15 @@
 import json
+from collections.abc import AsyncGenerator, Sequence
+from typing import ClassVar
 from uuid import uuid4
 
 import httpx
+from asgi_lifespan import LifespanManager
+from psycopg_pool import AsyncConnectionPool
+
+from llm_stack_api.app import create_app
+from llm_stack_core.chat import ChatService
+from llm_stack_core.inference.base import Capabilities, InferenceBackendError, Message
 
 
 def _events(body: str) -> list[dict]:
@@ -61,3 +69,41 @@ async def test_empty_content_is_rejected(client: httpx.AsyncClient) -> None:
     )
 
     assert response.status_code == 422
+
+
+class UnreachableClient:
+    """A backend that is down. Every call fails the way a refused connection does."""
+
+    backend: ClassVar[str] = "unreachable"
+
+    async def chat(
+        self, messages: Sequence[Message], model: str
+    ) -> AsyncGenerator[str]:
+        raise InferenceBackendError("connection refused")
+        yield  # never runs; makes this an async generator like the real clients
+
+    async def embed(self, texts: Sequence[str], model: str) -> list[list[float]]:
+        raise InferenceBackendError("connection refused")
+
+    async def capabilities(self, model: str) -> Capabilities:
+        raise InferenceBackendError("connection refused")
+
+
+async def test_unreachable_backend_is_a_502_problem(
+    pool: AsyncConnectionPool,
+) -> None:
+    app = create_app()
+    async with LifespanManager(app):
+        app.state.chat_service = ChatService(pool, UnreachableClient(), "fake-chat")
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            conversation = (await client.post("/conversations", json={})).json()
+            response = await client.post(
+                f"/conversations/{conversation['id']}/messages",
+                json={"content": "hello"},
+            )
+
+    assert response.status_code == 502
+    assert response.headers["content-type"].startswith("application/problem+json")
