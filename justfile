@@ -8,7 +8,7 @@ default:
     @just --list
 
 # Everything CI runs.
-check: lint test
+check: lint test test-go
 
 # Type-check the Python sources.
 typecheck:
@@ -20,15 +20,26 @@ lint:
     cd services/core && uv run ruff check .
     cd services/core && uv run ruff format --check .
     uv run --project services/core pyright
+    cd services/gateway && test -z "$(gofmt -l . | tee /dev/stderr)"
+    cd services/gateway && go vet ./...
 
-# Format the Python sources in place.
+# Format the Python and Go sources in place.
 fmt:
     cd services/core && uv run ruff format .
     cd services/core && uv run ruff check --fix .
+    cd services/gateway && go fmt ./...
 
 # Run the python test suite. Extra arguments go to pytest.
 test *args:
     cd services/core && uv run pytest {{args}}
+
+# Run the Go test suite.
+test-go:
+    cd services/gateway && go test ./...
+
+# Run the gateway in the foreground.
+gateway:
+    cd services/gateway && go run .
 
 # Start the development stack.
 dev:

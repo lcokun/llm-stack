@@ -20,6 +20,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
       - uses: extractions/setup-just@v4
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: services/gateway/go.mod
+          cache: false
       - run: just lint
   test:
     runs-on: ubuntu-latest
@@ -46,6 +50,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.2.0
       - uses: extractions/setup-just@v4
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: services/gateway/go.mod
+          cache: false
 
       - name: Install dbmate
         run: |
@@ -58,5 +66,5 @@ jobs:
 
       - run: just migrate
       - run: just test
-
+      - run: just test-go
 
