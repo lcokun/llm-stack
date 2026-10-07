@@ -1,6 +1,6 @@
 # 0009 — Core keeps an internal HTTP API behind the gateway
 
-- **Status:** proposed
+- **Status:** accepted
 - **Date:** 2026-10-07
 
 ## Context
