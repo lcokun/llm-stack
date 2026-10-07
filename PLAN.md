@@ -230,3 +230,4 @@ Learning notes written as each idea landed:
 - [ids-and-ordering.md](docs/concepts/ids-and-ordering.md)
 - [observability.md](docs/concepts/observability.md)
 - [inference-seam.md](docs/concepts/inference-seam.md)
+- [go-errors-as-values.md](docs/concepts/go-errors-as-values.md)
