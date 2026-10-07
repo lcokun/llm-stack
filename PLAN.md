@@ -104,11 +104,23 @@ Responses are validated against `api/openapi.yaml` in the test suite, so hand-wr
 models cannot drift from the contract without failing CI.
 
 ### Phase 2 — extract the gateway · **Go**
-- [ ] port `api/` to Go while it is ~200 lines
-- [ ] NDJSON → SSE translation at the edge
-- [ ] generate the Go client from `api/openapi.yaml`
-- [ ] `core` moved onto a bridge network, no published port
-- [ ] Python API layer deleted, the spike ends here
+Shape and order per [ADR 0009](docs/decisions/0009-core-keeps-an-internal-http-api.md):
+core keeps an internal HTTP API and the gateway is its only caller.
+- [x] gateway skeleton: env config, `/healthz`, startup errors exit non-zero, Go in CI
+- [ ] gateway reverse-proxies everything to core, so it sits in front first
+- [ ] core gains the NDJSON form of the messages route
+- [ ] hand-written Go client for core
+- [ ] public routes ported one at a time as explicit handlers: validation against
+      `api/openapi.yaml`, error mapping per ADR 0009
+- [ ] chat last: NDJSON → SSE translation, mid-stream failure, disconnect cancels core
+- [ ] public contract suite runs black-box against the live gateway in CI
+- [ ] public-facing parts of `llm_stack_api` deleted; core binds `127.0.0.1`, the spike
+      ends here
+
+### Phase 2b — containerise core and gateway
+- [ ] Dockerfiles for core and gateway, pinned base images
+- [ ] both services in compose; core has no published port
+- [ ] a network only core and the gateway share, per ADR 0009
 
 ### Phase 3 — web UI spike · JS
 - [ ] vanilla JS, no framework, deliberately plain
@@ -192,6 +204,7 @@ models cannot drift from the contract without failing CI.
 | [0006](docs/decisions/0006-own-api-plus-openai-compat.md) | Own API + OpenAI-compatible endpoint |
 | [0007](docs/decisions/0007-web-frontend-tauri-shell.md) | One web frontend, Tauri shell later |
 | [0008](docs/decisions/0008-monorepo-layout.md) | Same repo, polyglot monorepo, repo-owned migrations |
+| [0009](docs/decisions/0009-core-keeps-an-internal-http-api.md) | Core keeps an internal HTTP API; gateway is its only caller |
 
 ## Open questions
 
@@ -202,7 +215,8 @@ models cannot drift from the contract without failing CI.
 | Default chat model | phase 5b, by eval numbers |
 | Full v2 README | when there is a running system to document |
 | CI path filters + aggregate job | phase 2, when Go makes CI slow |
-| `ChatEvent` unreferenced, so generators may skip it | phase 2, via the generator's emit-all flag |
+| `ChatEvent` unreferenced, so generators may skip it | whenever types are first generated from the spec (ADR 0009 dropped Go codegen) |
+| Internal spec for core | when the internal API diverges from the public one, expected phase 8 |
 
 ## Concepts
 
