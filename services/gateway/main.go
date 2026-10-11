@@ -26,13 +26,15 @@ func main() {
 }
 
 func run(cfg Config) error {
-	return http.ListenAndServe(cfg.Addr, routes(newCoreProxy(cfg.CoreURL)))
+	handler := routes(newCoreProxy(cfg.CoreURL), newCoreClient(cfg.CoreURL))
+	return http.ListenAndServe(cfg.Addr, handler)
 }
 
-func routes(core http.Handler) http.Handler {
+func routes(proxy http.Handler, core *coreClient) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
-	mux.Handle("/", core)
+	mux.HandleFunc("GET /conversations/{id}", getConversationHandler(core))
+	mux.Handle("/", proxy)
 	return mux
 }
 

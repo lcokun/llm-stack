@@ -14,7 +14,7 @@ func TestHealthzIsAnsweredByTheGateway(t *testing.T) {
 	})
 	rec := httptest.NewRecorder()
 
-	routes(core).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	routes(core, nil).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
@@ -33,7 +33,7 @@ func TestUnmatchedRoutesReachCore(t *testing.T) {
 	req.Header.Set("X-Request-Id", "abc-123")
 	rec := httptest.NewRecorder()
 
-	routes(newCoreProxy(mustParseURL(t, core.URL))).ServeHTTP(rec, req)
+	routes(newCoreProxy(mustParseURL(t, core.URL)), nil).ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
@@ -52,7 +52,7 @@ func TestUnreachableCoreIsA502Problem(t *testing.T) {
 	core.Close()
 
 	rec := httptest.NewRecorder()
-	routes(newCoreProxy(target)).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/conversations/x", nil))
+	routes(newCoreProxy(target), nil).ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/conversations", nil))
 
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadGateway)

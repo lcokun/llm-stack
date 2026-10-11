@@ -24,16 +24,23 @@ func newCoreProxy(target *url.URL) *httputil.ReverseProxy {
 			r.SetURL(target)
 			r.SetXForwarded()
 		},
-		ErrorHandler: coreUnavailable,
+		ErrorHandler: writeCoreError,
 	}
 }
 
-func coreUnavailable(w http.ResponseWriter, r *http.Request, err error) {
-	if errors.Is(err, context.Canceled) {
-		return
+func writeCoreError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, context.Canceled):
+		// The client left; there is nobody to answer.
+	case errors.Is(err, errConversationNotFound):
+		writeProblem(w, http.StatusNotFound, "Conversation not found")
+	case errors.Is(err, context.DeadlineExceeded):
+		slog.Error("core timed out", "path", r.URL.Path, "err", err)
+		writeProblem(w, http.StatusGatewayTimeout, "Core timed out")
+	default:
+		slog.Error("core request failed", "path", r.URL.Path, "err", err)
+		writeProblem(w, http.StatusBadGateway, "Core unavailable")
 	}
-	slog.Error("core unreachable", "path", r.URL.Path, "err", err)
-	writeProblem(w, http.StatusBadGateway, "Core unavailable")
 }
 
 func writeProblem(w http.ResponseWriter, status int, title string) {
