@@ -231,3 +231,4 @@ Learning notes written as each idea landed:
 - [observability.md](docs/concepts/observability.md)
 - [inference-seam.md](docs/concepts/inference-seam.md)
 - [go-errors-as-values.md](docs/concepts/go-errors-as-values.md)
+- [go-context.md](docs/concepts/go-context.md)
