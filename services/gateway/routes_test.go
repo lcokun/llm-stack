@@ -29,7 +29,7 @@ func TestUnmatchedRoutesReachCore(t *testing.T) {
 	}))
 	defer core.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/conversations", nil)
+	req := httptest.NewRequest(http.MethodPost, "/conversations/abc/messages", nil)
 	req.Header.Set("X-Request-Id", "abc-123")
 	rec := httptest.NewRecorder()
 
@@ -38,8 +38,8 @@ func TestUnmatchedRoutesReachCore(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusCreated)
 	}
-	if got := rec.Body.String(); got != "POST /conversations" {
-		t.Errorf("core saw %q, want %q", got, "POST /conversations")
+	if got := rec.Body.String(); got != "POST /conversations/abc/messages" {
+		t.Errorf("core saw %q, want %q", got, "POST /conversations/abc/messages")
 	}
 	if got := rec.Header().Get("X-Seen-Request-Id"); got != "abc-123" {
 		t.Errorf("request id at core = %q, want %q", got, "abc-123")
@@ -52,7 +52,7 @@ func TestUnreachableCoreIsA502Problem(t *testing.T) {
 	core.Close()
 
 	rec := httptest.NewRecorder()
-	routes(newCoreProxy(target), nil).ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/conversations", nil))
+	routes(newCoreProxy(target), nil).ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/conversations/abc/messages", nil))
 
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadGateway)

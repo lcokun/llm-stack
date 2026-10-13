@@ -16,6 +16,7 @@ type problem struct {
 	Type   string `json:"type"`
 	Title  string `json:"title"`
 	Status int    `json:"status"`
+	Detail string `json:"detail,omitempty"`
 }
 
 func newCoreProxy(target *url.URL) *httputil.ReverseProxy {
@@ -50,5 +51,16 @@ func writeProblem(w http.ResponseWriter, status int, title string) {
 		Type:   "about:blank",
 		Title:  title,
 		Status: status,
+	})
+}
+
+func writeValidationProblem(w http.ResponseWriter, detail string) {
+	w.Header().Set("Content-Type", problemContentType)
+	w.WriteHeader(http.StatusUnprocessableEntity)
+	_ = json.NewEncoder(w).Encode(problem{
+		Type:   "about:blank",
+		Title:  "Request validation failed",
+		Status: http.StatusUnprocessableEntity,
+		Detail: detail,
 	})
 }
