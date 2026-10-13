@@ -34,6 +34,7 @@ func routes(proxy http.Handler, core *coreClient) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
 	mux.HandleFunc("GET /conversations/{id}", getConversationHandler(core))
+	mux.HandleFunc("POST /conversations", createConversationHandler(core))
 	mux.Handle("/", proxy)
 	return mux
 }
